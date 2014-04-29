@@ -7,26 +7,27 @@
 (in-package #:org.tymoonnext.universal-config)
 
 (defvar *config* (make-hash-table)
-  "")
-(defvar *augment-missing-accessors* T
-  "")
+  "The global configuration storage variable.
+Initialized to a standard EQL hash-table.")
+(defvar *augment-missing-places* T
+  "If set to non-NIL, (SETF (CONFIG-TREE ..) ..) will attempt to augment missing places.")
 
 (define-condition inexistent-place (error)
   ((%accessor :initarg :accessor :accessor accessor)
    (%object :initarg :object :accessor object))
-  (:documentation "")
+  (:documentation "Error condition signalled when attempting to set an inexistent place.")
   (:report (lambda (c s) (format s "Cannot set inexistent place: Accessor ~s does not exist on object ~s."
                                  (accessor c) (object c)))))
 
 (define-condition augmenting-place (warning)
   ((%accessor :initarg :accessor :accessor accessor)
    (%object :initarg :object :accessor object))
-  (:documentation "")
+  (:documentation "Warning condition signalled when a place is augmented automatically.")
   (:report (lambda (c s) (format s "Augmenting place for accessor ~s on object ~s"
                                  (accessor c) (object c)))))
 
 (defgeneric access (config-object accessor &optional default)
-  (:documentation "")
+  (:documentation "Universal object accessor.")
   (:method ((o list) accessor &optional default)
     ;; ???
     ;; This is a problem because lists can represent arbitrary data.
@@ -49,7 +50,7 @@
     (values default NIL)))
 
 (defgeneric (setf access) (value config-object accessor)
-  (:documentation "")
+  (:documentation "Universal object setter.")
   (:method (value (o list) accessor)
     ;; ???
     ;; This is a problem because lists can represent arbitrary data.
@@ -69,30 +70,36 @@
     (error 'inexistent-place :object null :accessor accessor)))
 
 (defgeneric make-container (accessor)
-  (:documentation "")
+  (:documentation "Attempts to create a fitting container for an accessor.")
   (:method ((accessor fixnum))
     (make-array accessor :adjustable T :fill-pointer 0))
+  (:method ((accessor list))
+    (make-array accessor))
   (:method ((accessor symbol))
     (make-hash-table))
   (:method (accessor)
     (make-hash-table :test 'equal)))
 
 (defun config-tree (&rest accessors)
-  ""
+  "Retrieve a value from the configuration."
   (loop for accessor in accessors
         for object = (access *config* accessor)
           then (access object accessor)
         finally (return object)))
 
 (defgeneric (setf config-tree) (value &rest accessors)
-  (:documentation "")
+  (:documentation "Set a value in the configuration.
+
+If *AUGMENT-MISSING-PLACES* is non-NIL, missing path parts
+will be attempted to be augmented. The container object is
+chosen through MAKE-CONTAINER.")
   (:method (value &rest accessors)
     (loop with last = (car (last accessors))
           for accessor in (butlast accessors)
           for previous = *config* then object
           for (object exists) = (multiple-value-list (access previous accessor))
           do (unless exists
-               (unless *autocreate-missing-accessors*
+               (unless *augment-missing-places*
                  (error 'inexistent-place :object previous :accessor accessor))
                (warn 'augmenting-place :object previous :accessor accessor)
                (setf object (make-container accessor)
