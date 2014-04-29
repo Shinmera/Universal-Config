@@ -16,7 +16,8 @@
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :description "Library to provide a universal configuration layer."
   :serial T
-  :components ((:file "package"))
+  :components ((:file "package")
+               (:file "access"))
   :depends-on ())
 
 ;; (defsystem universal-config-doc
