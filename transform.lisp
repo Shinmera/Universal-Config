@@ -17,12 +17,15 @@
 ;; define-deserializer, define-string-serializer
 
 (defun escape (string &optional (char #\:))
+  ""
   (cl-ppcre:regex-replace-all (string char) string (format NIL "\\~a" char)))
 
 (defun unescape (string &optional (char #\:))
+  ""
   (cl-ppcre:regex-replace-all (format NIL "\\\\~a" char) string (string char)))
 
 (defun split-escaped (string &optional (char #\:))
+  ""
   (cl-ppcre:split (format NIL "(?<!\\\\)~a" char) string))
 
 (defgeneric serialize (object)
@@ -30,6 +33,7 @@
   (:method (object) object))
 
 (defmacro define-string-serializer ((ident-char object-type object-var) &body body)
+  ""
   `(defmethod serialize ((,object-var ,object-type))
      (concatenate 'string ,(string ident-char) (progn ,@body))))
 
@@ -42,6 +46,7 @@
           (escape (symbol-name symbol))))
 
 (defmacro define-serializer ((object-type object-var &optional return-vector) &body body)
+  ""
   (let ((result (gensym "RESULT")))
     `(defmethod serialize ((,object-var ,object-type))
        (let ((,result (progn ,@body)))
@@ -78,6 +83,7 @@
   (:documentation ""))
 
 (defmacro define-string-deserializer ((ident-char string) &body body)
+  ""
   `(defmethod deserialize-string ((,(gensym "CHAR") (eql ,ident-char)) ,string)
      ,@body))
 
@@ -95,6 +101,7 @@
   (:documentation ""))
 
 (defmacro define-deserializer ((object-type object-var &optional expect-vector) &body body)
+  ""
   (let ((objtemp (gensym "OBJECT")))
     `(defmethod deserialize-object ((,(gensym "TYPE") (eql ,(intern (string object-type) "KEYWORD"))) ,objtemp)
        (let ((,object-var ,(if expect-vector objtemp `(aref ,objtemp 0))))

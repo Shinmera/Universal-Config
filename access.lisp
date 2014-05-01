@@ -6,9 +6,9 @@
 
 (in-package #:org.tymoonnext.universal-config)
 
-(defvar *config* (make-hash-table)
+(defvar *config* (make-hash-table :test 'equal)
   "The global configuration storage variable.
-Initialized to a standard EQL hash-table.")
+Initialized to a standard EQUAL hash-table.")
 (defvar *augment-missing-places* T
   "If set to non-NIL, (SETF (CONFIG-TREE ..) ..) will attempt to augment missing places.")
 
