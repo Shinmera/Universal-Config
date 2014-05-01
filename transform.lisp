@@ -6,24 +6,40 @@
 
 (in-package #:org.tymoonnext.universal-config)
 
-(defvar *default-transformer* :lisp
-  "")
+;; Serializing and Deserializing works with the hope that any and all output
+;; formats will support: Arrays, Hash Tables, Strings and Numbers.
+;;
+;; By default the functions defined here will only handle the following types:
+;; string, symbol, hash-table, vector, list
+;;
+;; Adding support for other types will have to happen through the macros:
+;; define-serializer, define-deserializer,
+;; define-deserializer, define-string-serializer
 
 (defun escape (string &optional (char #\:))
   (cl-ppcre:regex-replace-all (string char) string (format NIL "\\~a" char)))
+
+(defun unescape (string &optional (char #\:))
+  (cl-ppcre:regex-replace-all (format NIL "\\\\~a" char) string (string char)))
 
 (defun split-escaped (string &optional (char #\:))
   (cl-ppcre:split (format NIL "(?<!\\\\)~a" char) string))
 
 (defgeneric serialize (object)
   (:documentation "")
-  (:method ((string string))
-    (format NIL "-~a" string))
-  (:method ((symbol symbol))
-    (format NIL "+~a:~a"
-            (escape (package-name (symbol-package symbol)))
-            (escape (symbol-name symbol))))
   (:method (object) object))
+
+(defmacro define-string-serializer ((ident-char object-type object-var) &body body)
+  `(defmethod serialize ((,object-var ,object-type))
+     (concatenate 'string ,(string ident-char) (progn ,@body))))
+
+(define-string-serializer (#\- string string)
+  string)
+
+(define-string-serializer (#\+ symbol symbol)
+  (format NIL "~a:~a"
+          (escape (package-name (symbol-package symbol)))
+          (escape (symbol-name symbol))))
 
 (defmacro define-serializer ((object-type object-var &optional return-vector) &body body)
   (let ((result (gensym "RESULT")))
@@ -48,18 +64,32 @@
           finally (return r))
     (make-array 2 :initial-contents (list (string (hash-table-test table)) r))))
 
+
+
 (defgeneric deserialize (object)
   (:documentation "")
   (:method ((string string))
-    (if (char= (aref string 0) #\-)
-        (subseq string 1)
-        (destructuring-bind (package-name symbol-name) (split-escaped (subseq string 1))
-          (let ((package (find-package package-name)))
-            (or (find-symbol symbol-name package)
-                (intern symbol-name package))))))
+    (deserialize-string (aref string 0) (subseq string 1)))
   (:method ((vector vector))
     (deserialize-object (find-symbol (aref vector 0) "KEYWORD") (subseq vector 1)))
   (:method (object) object))
+
+(defgeneric deserialize-string (ident-char string)
+  (:documentation ""))
+
+(defmacro define-string-deserializer ((ident-char string) &body body)
+  `(defmethod deserialize-string ((,(gensym "CHAR") (eql ,ident-char)) ,string)
+     ,@body))
+
+(define-string-deserializer (#\- string)
+  string)
+
+(define-string-deserializer (#\+ string)
+  (let* ((parts (split-escaped string))
+         (package (find-package (first parts)))
+         (symbol-name (unescape (second parts))))
+    (or (find-symbol symbol-name package)
+        (intern symbol-name package))))
 
 (defgeneric deserialize-object (type object)
   (:documentation ""))
