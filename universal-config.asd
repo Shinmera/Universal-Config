@@ -17,8 +17,9 @@
   :description "Library to provide a universal configuration layer."
   :serial T
   :components ((:file "package")
-               (:file "access"))
-  :depends-on ())
+               (:file "access")
+               (:file "transform"))
+  :depends-on (:cl-ppcre))
 
 ;; (defsystem universal-config-doc
 ;;   :name "Universal-Config Doc"
