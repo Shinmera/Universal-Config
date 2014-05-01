@@ -45,14 +45,17 @@
                            (aref vector (1+ (* 2 i))) v)
                   finally (return vector)) stream))
   (:method ((string string) stream)
-    (print string stream))
+    (format stream "~S" string))
   (:method ((vector vector) stream)
     (write-string "#(" stream)
     (loop for item across vector
-          do (%print item stream))
+          for i from 1
+          do (%print item stream)
+          if (< i (length vector))
+            do (write-string " " stream))
     (write-string ")" stream))
   (:method (object stream)
-    (print object stream)))
+    (format stream "~S" object)))
 
 (define-save-format lisp (stream object)
   (%print object stream))
