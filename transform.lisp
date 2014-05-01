@@ -17,37 +17,75 @@
 
 (defgeneric serialize (object)
   (:documentation "")
-  (:method ((o string))
-    (format NIL "-~a" o))
-  (:method ((o symbol))
+  (:method ((string string))
+    (format NIL "-~a" string))
+  (:method ((symbol symbol))
     (format NIL "+~a:~a"
-            (escape (package-name (symbol-package o)))
-            (escape (symbol-name o))))
-  (:method ((o hash-table))
-    (let ((r (make-hash-table :test 'equal)))
-      (loop for k being the hash-keys of o
-            for v being the hash-values of o
-            do (setf (gethash (serialize k) r)
-                     (serialize v))
-            finally (return r))
-      (make-array 3 :initial-contents (list "HASH-TABLE" (string (hash-table-test o)) r))))
-  (:method ((o vector))
-    (loop with length = (1+ (array-dimension o 0))
-          with r = (make-array length)
-          for i from 1 below length
-          do (setf (aref r i) (serialize (aref o (1- i))))
-          finally (return (progn (setf (aref r 0) "VECTOR") r))))
-  (:method ((o list))
-    (loop with length = (1+ (length o))
-          with r = (make-array length)
-          for i from 1 below length
-          for element in o
-          do (setf (aref r i) (serialize element))
-          finally (return (progn (setf (aref r 0) "LIST") r))))
-  (:method (o) o))
+            (escape (package-name (symbol-package symbol)))
+            (escape (symbol-name symbol))))
+  (:method (object) object))
 
-(defgeneric deserialize-primitive (object)
-  )
+(defmacro define-serializer ((object-type object-var &optional return-vector) &body body)
+  (let ((result (gensym "RESULT")))
+    `(defmethod serialize ((,object-var ,object-type))
+       (let ((,result (progn ,@body)))
+         ,(if return-vector
+              `(concatenate 'vector '(,(string object-type)) ,result)
+              `(make-array 2 :initial-contents (list ,(string object-type) ,result)))))))
 
-(defgeneric deserialize (type object)
-  )
+(define-serializer (vector vector T)
+  (map 'vector #'serialize vector))
+
+(define-serializer (list list T)
+  (map 'vector #'serialize list))
+
+(define-serializer (hash-table table T)
+  (let ((r (make-hash-table :test 'equal)))
+    (loop for k being the hash-keys of table
+          for v being the hash-values of table
+          do (setf (gethash (serialize k) r)
+                   (serialize v))
+          finally (return r))
+    (make-array 2 :initial-contents (list (string (hash-table-test table)) r))))
+
+(defgeneric deserialize (object)
+  (:documentation "")
+  (:method ((string string))
+    (if (char= (aref string 0) #\-)
+        (subseq string 1)
+        (destructuring-bind (package-name symbol-name) (split-escaped (subseq string 1))
+          (let ((package (find-package package-name)))
+            (or (find-symbol symbol-name package)
+                (intern symbol-name package))))))
+  (:method ((vector vector))
+    (deserialize-object (find-symbol (aref vector 0) "KEYWORD") (subseq vector 1)))
+  (:method (object) object))
+
+(defgeneric deserialize-object (type object)
+  (:documentation ""))
+
+(defmacro define-deserializer ((object-type object-var &optional expect-vector) &body body)
+  (let ((objtemp (gensym "OBJECT")))
+    `(defmethod deserialize-object ((,(gensym "TYPE") (eql ,(intern (string object-type) "KEYWORD"))) ,objtemp)
+       (let ((,object-var ,(if expect-vector objtemp `(aref ,objtemp 0))))
+         ,@body))))
+
+(define-deserializer (list array T)
+  (map 'list #'deserialize array))
+
+(define-deserializer (vector array T)
+  (map 'vector #'deserialize array))
+
+(define-deserializer (hash-table array T)
+  (let* ((type (aref array 0))
+         (map (aref array 1))
+         (res (make-hash-table :test (cond ((string= type "EQ") 'eq)
+                                           ((string= type "EQL") 'eql)
+                                           ((string= type "EQUAL") 'equal)
+                                           ((string= type "EQUALP") 'equalp)
+                                           (T (error "Unknown HASH-TABLE test specifier: ~a" type))))))
+    (loop for k being the hash-keys of map
+          for v being the hash-values of map
+          do (setf (gethash (deserialize k) res)
+                   (deserialize v)))
+    res))
