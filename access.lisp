@@ -94,14 +94,14 @@ If *AUGMENT-MISSING-PLACES* is non-NIL, missing path parts
 will be attempted to be augmented. The container object is
 chosen through MAKE-CONTAINER.")
   (:method (value &rest accessors)
-    (loop with last = (car (last accessors))
-          for accessor in (butlast accessors)
-          for previous = *config* then object
-          for (object exists) = (multiple-value-list (access previous accessor))
-          do (unless exists
+    (loop for previous = NIL then object
+          for object = *config*
+            then (access object accessor)
+          for accessor in accessors
+          do (unless object
                (unless *augment-missing-places*
                  (error 'inexistent-place :object previous :accessor accessor))
                (warn 'augmenting-place :object previous :accessor accessor)
                (setf object (make-container accessor)
                      (access previous accessor) object))
-          finally (setf (access object last) value))))
+          finally (setf (access previous accessor) value))))
