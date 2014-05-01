@@ -7,16 +7,16 @@
 (in-package #:org.tymoonnext.universal-config)
 
 (defvar *output-format* :lisp
-  "")
+  "The default output format to use.")
 
 (defun save-configuration (path &key (format *output-format*) (object *config*))
-  ""
-  (with-open-file (stream path :direction :output :if-does-not-exist :create :if-exists :supersede :external-format :utf-8)
+  "Save the configuration OBJECT to PATH using the given FORMAT."
+  (with-open-file (stream path :direction :output :if-does-not-exist :create :if-exists :supersede)
     (%save format stream (serialize object))))
 
 (defun load-configuaration (path &key (format *output-format*))
-  ""
-  (with-open-file (stream path :direction :input :if-does-not-exist :error :external-format :utf-8)
+  "Load the configuration from PATH with the given FORMAT."
+  (with-open-file (stream path :direction :input :if-does-not-exist :error)
     (setf *config* (deserialize (%load format path)))))
 
 (defgeneric %save (format path object))
@@ -24,12 +24,12 @@
 (defgeneric %load (format path))
 
 (defmacro define-save-format (name (streamvar objectvar) &body body)
-  ""
+  "Define a format of NAME to save an object to a stream."
   `(defmethod %save ((,(gensym "FORMAT") (eql ,(intern (string name) "KEYWORD"))) ,streamvar ,objectvar)
      ,@body))
 
 (defmacro define-load-format (name (streamvar) &body body)
-  ""
+  "Define a format of NAME to load an object from a stream."
   `(defmethod %load ((,(gensym "FORMAT") (eql ,(intern (string name) "KEYWORD"))) ,streamvar)
      ,@body))
 
