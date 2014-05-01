@@ -12,13 +12,13 @@
 (defun save-configuration (path &key (format *output-format*) (object *config*))
   "Save the configuration OBJECT to PATH using the given FORMAT."
   (with-open-file (stream path :direction :output :if-does-not-exist :create :if-exists :supersede)
-    (%save format stream (serialize object)))
+    (%save format stream object))
   path)
 
 (defun load-configuration (path &key (format *output-format*))
   "Load the configuration from PATH with the given FORMAT."
   (with-open-file (stream path :direction :input :if-does-not-exist :error)
-    (setf *config* (deserialize (%load format stream)))))
+    (setf *config* (%load format stream))))
 
 (defgeneric %save (format path object))
 
@@ -58,7 +58,7 @@
     (format stream "~S" object)))
 
 (define-save-format lisp (stream object)
-  (%print object stream))
+  (%print (serialize object) stream))
 
 (define-load-format lisp (stream)
-  (read stream))
+  (deserialize (read stream)))
