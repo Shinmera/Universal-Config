@@ -16,6 +16,9 @@
 ;; define-serializer, define-deserializer,
 ;; define-deserializer, define-string-serializer
 
+(defvar *fallback-serializer* #'identity)
+(defvar *fallback-deserializer* #'identity)
+
 (defun escape (string &optional (char #\:))
   "Escape all instances of CHAR in the string that match CHAR with a backslash."
   (cl-ppcre:regex-replace-all (string char) string (format NIL "\\~a" char)))
@@ -30,7 +33,8 @@
 
 (defgeneric serialize (object)
   (:documentation "Serialize the given object recursively into a format that is ready for outputting.")
-  (:method (object) object))
+  (:method (object)
+    (funcall *fallback-serializer* object)))
 
 (defmacro define-string-serializer ((ident-char object-type object-var) &body body)
   "Defines an OBJECT-TYPE to be serialized to a string.
@@ -72,15 +76,14 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
           finally (return r))
     (make-array 2 :initial-contents (list (string (hash-table-test table)) r))))
 
-
-
 (defgeneric deserialize (object)
   (:documentation "Deserialize an OBJECT into a usable configuration object.")
   (:method ((string string))
     (deserialize-string (aref string 0) (subseq string 1)))
   (:method ((vector vector))
     (deserialize-object (find-symbol (aref vector 0) "KEYWORD") (subseq vector 1)))
-  (:method (object) object))
+  (:method (object)
+    (funcall *fallback-deserializer* object)))
 
 (defgeneric deserialize-string (ident-char string)
   (:documentation "Deserialize a STRING according to the IDENT-CHAR."))
@@ -99,6 +102,17 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
          (symbol-name (unescape (second parts))))
     (or (find-symbol symbol-name package)
         (intern symbol-name package))))
+
+(define-string-deserializer (#\i string)
+  (parse-integer string))
+
+(define-string-deserializer (#\f string)
+  (parse-float string))
+
+(define-string-deserializer (#\c string)
+  (let ((parts (split-escaped string)))
+    (complex (parse-float (first parts))
+             (parse-float (second parts)))))
 
 (defgeneric deserialize-object (type object)
   (:documentation "Deserialize an OBJECT of TYPE into its usable representation.

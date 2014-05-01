@@ -10,7 +10,7 @@
 
 (defsystem universal-config
   :name "Universal-Config"
-  :version "2.0.1"
+  :version "1.0.0"
   :license "Artistic"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
@@ -20,7 +20,8 @@
                (:file "access")
                (:file "transform")
                (:file "output"))
-  :depends-on (:cl-ppcre))
+  :depends-on (:cl-ppcre
+               :parse-float))
 
 ;; (defsystem universal-config-doc
 ;;   :name "Universal-Config Doc"

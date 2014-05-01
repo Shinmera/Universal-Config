@@ -6,7 +6,7 @@
 
 (defpackage universal-config
   (:nicknames #:org.tymoonnext.universal-config #:uc)
-  (:use #:cl)
+  (:use #:cl #:parse-float)
   ;; access.lisp
   (:export
    #:*config*
@@ -34,6 +34,9 @@
    #:define-load-format)
   ;; transform.lisp
   (:export
+   #:*fallback-serializer*
+   #:*fallback-deserializer*
+   
    #:escape
    #:unescape
    #:split-escaped
