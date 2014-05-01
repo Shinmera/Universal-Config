@@ -18,7 +18,8 @@
   :serial T
   :components ((:file "package")
                (:file "access")
-               (:file "transform"))
+               (:file "transform")
+               (:file "output"))
   :depends-on (:cl-ppcre))
 
 ;; (defsystem universal-config-doc
