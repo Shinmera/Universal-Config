@@ -128,8 +128,18 @@ If EXPECT-VECTOR is non-NIL, the bound OBJECT-VAR will be of type VECTOR."
                                            ((string= type "EQUAL") 'equal)
                                            ((string= type "EQUALP") 'equalp)
                                            (T (error "Unknown HASH-TABLE test specifier: ~a" type))))))
-    (loop for k being the hash-keys of map
-          for v being the hash-values of map
-          do (setf (gethash (deserialize k) res)
-                   (deserialize v)))
+    (etypecase map
+      (hash-table (loop for k being the hash-keys of map
+                        for v being the hash-values of map
+                        do (setf (gethash (deserialize k) res)
+                                 (deserialize v))))
+      (list (loop for (k v) on map by #'cddr
+                  do (setf (gethash (deserialize k) res)
+                           (deserialize v))))
+      (vector (loop for i below (length map)
+                    for k = NIL then v
+                    for v = (aref map i)
+                    when (= (mod i 2) 1)
+                      do (setf (gethash (deserialize k) res)
+                               (deserialize v)))))
     res))
