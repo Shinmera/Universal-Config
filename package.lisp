@@ -19,9 +19,11 @@
    #:augmenting-place
    #:accessor
    #:object
-   
+
+   #:with-configuration
    #:access
    #:make-container
+   #:set-config-tree
    #:config-tree)
   ;; output.lisp
   (:export

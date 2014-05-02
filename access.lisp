@@ -6,9 +6,9 @@
 
 (in-package #:org.tymoonnext.universal-config)
 
-(defvar *config* (make-hash-table :test 'equal)
-  "The global configuration storage variable.
-Initialized to a standard EQUAL hash-table.")
+(defvar *config*)
+(setf (documentation '*config* 'variable)
+      "The global configuration storage variable.")
 (defvar *augment-missing-places* T
   "If set to non-NIL, (SETF (CONFIG-TREE ..) ..) will attempt to augment missing places.")
 
@@ -25,6 +25,11 @@ Initialized to a standard EQUAL hash-table.")
   (:documentation "Warning condition signalled when a place is augmented automatically.")
   (:report (lambda (c s) (format s "Augmenting place for accessor ~s on object ~s"
                                  (accessor c) (object c)))))
+
+(defmacro with-configuration ((configuration) &body body)
+  "Establishes a configuration context."
+  `(let ((*config* ,configuration))
+     ,@body))
 
 (defgeneric access (config-object accessor &optional default)
   (:documentation "Universal object accessor.")
@@ -87,21 +92,23 @@ Initialized to a standard EQUAL hash-table.")
           then (access object accessor)
         finally (return object)))
 
-(defgeneric (setf config-tree) (value &rest accessors)
-  (:documentation "Set a value in the configuration.
+(defun set-config-tree (accessors value)
+  (loop for previous = NIL    then object
+        for object = *config* then (access object accessor)
+        for prevaccess = NIL  then accessor
+        for accessor in accessors
+        do (unless object
+             (unless *augment-missing-places*
+               (error 'inexistent-place :object previous :accessor prevaccess))
+             (warn 'augmenting-place :object previous :accessor prevaccess)
+             (setf object (make-container accessor)
+                   (access previous prevaccess) object))
+        finally (setf (access previous accessor) value)))
+
+(defun (setf config-tree) (value &rest accessors)
+  "Set a value in the configuration.
 
 If *AUGMENT-MISSING-PLACES* is non-NIL, missing path parts
 will be attempted to be augmented. The container object is
-chosen through MAKE-CONTAINER.")
-  (:method (value &rest accessors)
-    (loop for previous = NIL    then object
-          for object = *config* then (access object accessor)
-          for prevaccess = NIL  then accessor
-          for accessor in accessors
-          do (unless object
-               (unless *augment-missing-places*
-                 (error 'inexistent-place :object previous :accessor prevaccess))
-               (warn 'augmenting-place :object previous :accessor prevaccess)
-               (setf object (make-container accessor)
-                     (access previous prevaccess) object))
-          finally (setf (access previous accessor) value))))
+chosen through MAKE-CONTAINER."
+  (set-config-tree accessors value))
