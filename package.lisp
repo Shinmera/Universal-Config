@@ -54,3 +54,11 @@
    #:define-string-deserialize
    #:define-deserializer)
   )
+
+(defpackage universal-config-lisp
+  (:nicknames #:org.tymoonnext.universal-config.lisp #:uc-lisp)
+  (:use #:cl #:universal-config))
+
+(defpackage universal-config-json
+  (:nicknames #:org.tymoonnext.universal-config.json #:uc-json)
+  (:use #:cl #:universal-config))
