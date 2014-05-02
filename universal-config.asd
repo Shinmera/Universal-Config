@@ -19,7 +19,9 @@
   :components ((:file "package")
                (:file "access")
                (:file "transform")
-               (:file "output"))
+               (:file "output")
+               (:module "outputs"
+                :components ((:file "lisp"))))
   :depends-on (:cl-ppcre
                :parse-float))
 
