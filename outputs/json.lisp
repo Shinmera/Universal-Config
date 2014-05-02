@@ -10,14 +10,9 @@
 (in-package #:org.tymoonnext.universal-config.json)
 
 (define-save-format json (stream object)
-  (let ((*fallback-serializer*
-          #'(lambda (object)
-              (print "A")
-              (typecase object
-                (integer (format NIL "i~s" object))
-                (float (format NIL "f~s" object))
-                (complex (format NIL "c~s:~s" (realpart object) (imagpart object)))
-                (T object)))))
+  (let ((*serialize-numbers* T)
+        (*serialize-symbols* T)
+        (*serialize-hash-tables* T))
     (yason:encode (serialize object) stream)))
 
 (define-load-format json (stream)
