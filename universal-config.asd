@@ -21,7 +21,8 @@
                (:file "transform")
                (:file "output")
                (:module "outputs"
-                :components ((:file "lisp"))))
+                :components ((:file "lisp")
+                             (:file "json"))))
   :depends-on (:cl-ppcre
                :parse-float))
 
