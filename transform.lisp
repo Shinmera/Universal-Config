@@ -18,6 +18,9 @@
 
 (defvar *fallback-serializer* #'identity)
 (defvar *fallback-deserializer* #'identity)
+(defvar *serialize-symbols* T)
+(defvar *serialize-hash-tables* T)
+(defvar *serialize-numbers* T)
 
 (defun escape (string &optional (char #\:))
   "Escape all instances of CHAR in the string that match CHAR with a backslash."
@@ -45,11 +48,6 @@ To discern string serialized objects, an IDENT-CHAR is needed."
 (define-string-serializer (#\- string string)
   string)
 
-(define-string-serializer (#\+ symbol symbol)
-  (format NIL "~a:~a"
-          (escape (package-name (symbol-package symbol)))
-          (escape (symbol-name symbol))))
-
 (defmacro define-serializer ((object-type object-var &optional return-vector) &body body)
   "Define an OBJECT-TYPE to be serialized. The expected value of this function should be one of HASH-TABLE, VECTOR, STRING or NUMBER.
 
@@ -67,14 +65,32 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
 (define-serializer (list list T)
   (map 'vector #'serialize list))
 
-(define-serializer (hash-table table T)
-  (let ((r (make-hash-table :test 'equal)))
-    (loop for k being the hash-keys of table
-          for v being the hash-values of table
-          do (setf (gethash (serialize k) r)
-                   (serialize v))
-          finally (return r))
-    (make-array 2 :initial-contents (list (string (hash-table-test table)) r))))
+(defmethod serialize ((table hash-table))
+  (if *serialize-hash-tables*
+      (let ((r (make-hash-table :test 'equal)))
+        (loop for k being the hash-keys of table
+              for v being the hash-values of table
+              do (setf (gethash (serialize k) r)
+                       (serialize v))
+              finally (return r))
+        (make-array 3 :initial-contents (list "HASH-TABLE" (string (hash-table-test table)) r)))
+      table))
+
+(defmethod serialize ((symbol symbol))
+  (if *serialize-symbols*
+      (format NIL "+~a:~a"
+              (escape (package-name (symbol-package symbol)))
+              (escape (symbol-name symbol)))
+      symbol))
+
+(defmethod serialize ((number number))
+  (if *serialize-numbers*
+      (etypecase number
+        (integer (format NIL "i~S" number))
+        (float (format NIL "f~S" number))
+        (ratio (format NIL "r~S" number))
+        (complex (format NIL "c~S:~S" (realpart number) (imagpart number))))
+      number))
 
 (defgeneric deserialize (object)
   (:documentation "Deserialize an OBJECT into a usable configuration object.")
@@ -105,6 +121,11 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
 
 (define-string-deserializer (#\i string)
   (parse-integer string))
+
+(define-string-deserializer (#\r string)
+  (let ((parts (split-escaped string #\/)))
+    (/ (parse-integer (first parts))
+       (parse-integer (second parts)))))
 
 (define-string-deserializer (#\f string)
   (parse-float string))

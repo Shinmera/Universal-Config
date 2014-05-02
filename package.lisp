@@ -38,6 +38,9 @@
   (:export
    #:*fallback-serializer*
    #:*fallback-deserializer*
+   #:*serialize-symbols*
+   #:*serialize-hash-tables*
+   #:*serialize-numbers*
    
    #:escape
    #:unescape
