@@ -4,7 +4,7 @@
  Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
-(in-package #:org.tymoonnext.universal-config)
+(in-package #:org.tymoonnext.universal-config.lisp)
 
 (defun hash-table-printer (stream table)
   (pprint-logical-block (stream () :prefix "{" :suffix "}")
