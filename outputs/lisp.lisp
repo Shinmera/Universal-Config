@@ -44,7 +44,6 @@
      (set-macro-character #\{ #'hash-table-reader)
      (set-macro-character #\} (make-return +stop+))
      (set-macro-character #\, (make-return +ignore+))
-     (set-macro-character #\: (make-return +ignore+))
      (set-pprint-dispatch 'hash-table #'hash-table-printer)
      ,@body))
 
