@@ -77,7 +77,12 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
                        (serialize v))
               finally (return r))
         (make-array 3 :initial-contents (list "HASH-TABLE" (string (hash-table-test table)) r)))
-      table))
+      (loop with r = (make-hash-table :test (hash-table-test table))
+            for k being the hash-keys of table
+            for v being the hash-values of table
+            do (setf (gethash (serialize k) r)
+                     (serialize v))
+            finally (return r))))
 
 (defmethod serialize ((symbol symbol))
   (if *serialize-symbols*
