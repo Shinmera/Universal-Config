@@ -63,9 +63,9 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
 (define-serializer (vector vector T)
   (map 'vector #'serialize vector))
 
-(define-serializer (list list T)
+(defmethod serialize ((list list))
   (if *serialize-lists*
-      (map 'vector #'serialize list)
+      (concatenate 'vector '("LIST") (map 'vector #'serialize list))
       (map 'list #'serialize list)))
 
 (defmethod serialize ((table hash-table))
