@@ -165,7 +165,7 @@ If EXPECT-VECTOR is non-NIL, the bound OBJECT-VAR will be of type VECTOR."
 (define-deserializer (vector array T)
   (loop with res = (make-array (length array) :adjustable T :fill-pointer t)
         for i below (length array)
-        do (setf (aref res i) (aref array i))
+        do (setf (aref res i) (deserialize (aref array i)))
         finally (return res)))
 
 (define-deserializer (hash-table array T)
