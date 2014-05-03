@@ -20,6 +20,7 @@
 (defvar *fallback-deserializer* #'identity)
 (defvar *serialize-symbols* T)
 (defvar *serialize-hash-tables* T)
+(defvar *serialize-lists* T)
 (defvar *serialize-numbers* T)
 
 (defun escape (string &optional (char #\:))
@@ -63,7 +64,9 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
   (map 'vector #'serialize vector))
 
 (define-serializer (list list T)
-  (map 'vector #'serialize list))
+  (if *serialize-lists*
+      (map 'vector #'serialize list)
+      (map 'list #'serialize list)))
 
 (defmethod serialize ((table hash-table))
   (if *serialize-hash-tables*
@@ -153,7 +156,10 @@ If EXPECT-VECTOR is non-NIL, the bound OBJECT-VAR will be of type VECTOR."
   (map 'list #'deserialize array))
 
 (define-deserializer (vector array T)
-  (map 'vector #'deserialize array))
+  (loop with res = (make-array (length array) :adjustable T :fill-pointer t)
+        for i below (length array)
+        do (setf (aref res i) (aref array i))
+        finally (return res)))
 
 (define-deserializer (hash-table array T)
   (let* ((type (aref array 0))

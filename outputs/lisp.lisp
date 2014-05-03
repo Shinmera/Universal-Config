@@ -52,7 +52,8 @@
     (let ((*print-array* T)
           (*serialize-symbols* NIL)
           (*serialize-hash-tables* NIL)
-          (*serialize-numbers* NIL))
+          (*serialize-numbers* NIL)
+          (*serialize-lists* NIL))
       (print (serialize object) stream))))
 
 (define-load-format lisp (stream)

@@ -41,6 +41,7 @@
    #:*serialize-symbols*
    #:*serialize-hash-tables*
    #:*serialize-numbers*
+   #:*serialize-lists*
    
    #:escape
    #:unescape
