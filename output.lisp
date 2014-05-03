@@ -15,10 +15,11 @@
     (%save format stream object))
   path)
 
-(defun load-configuration (path &key (format *output-format*))
+(defun load-configuration (path &key (format *output-format*) (if-does-not-exist :error))
   "Load the configuration from PATH with the given FORMAT."
-  (with-open-file (stream path :direction :input :if-does-not-exist :error)
-    (setf *config* (%load format stream))))
+  (with-open-file (stream path :direction :input :if-does-not-exist if-does-not-exist)
+    (when stream
+      (setf *config* (%load format stream)))))
 
 (defgeneric %save (format path object))
 
