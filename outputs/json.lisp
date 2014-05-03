@@ -71,7 +71,8 @@
                       collect (if (eq 'null token) NIL token))))
     (loop with table = (make-hash-table :test 'equal)
           for (key val) on vals by #'cddr
-          do (setf (gethash key table) val)
+          do (setf (gethash (deserialize key) table)
+                   (deserialize val))
           finally (return table))))
 
 (defun vector-reader (stream subchar)
@@ -80,7 +81,7 @@
                     while (not (eq token +stop+))
                     unless (eq token +ignore+)
                       collect (if (eq 'null token) NIL token))))
-    (coerce vals 'vector)))
+    (map 'vector #'deserialize vals)))
 
 (defmacro with-json-syntax (() &body body)
   `(let ((*readtable* (copy-readtable))

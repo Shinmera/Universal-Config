@@ -35,7 +35,8 @@
     (ecase test (EQ) (EQL) (EQUAL) (EQUALP))
     (loop with table = (make-hash-table :test test)
           for (key val) on vals by #'cddr
-          do (setf (gethash key table) val)
+          do (setf (gethash (deserialize key) table)
+                   (deserialize val))
           finally (return table))))
 
 (defmacro with-hash-table-syntax (() &body body)
