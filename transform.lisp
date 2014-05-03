@@ -106,6 +106,8 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
     (deserialize-string (aref string 0) (subseq string 1)))
   (:method ((vector vector))
     (deserialize-object (find-symbol (aref vector 0) "KEYWORD") (subseq vector 1)))
+  (:method ((list list))
+    (mapcar #'deserialize list))
   (:method (object)
     (funcall *fallback-deserializer* object)))
 
