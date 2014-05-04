@@ -53,7 +53,8 @@
    
    #:deserialize
    #:define-string-deserialize
-   #:define-deserializer)
+   #:define-deserializer
+   #:define-class-de/serializer)
   )
 
 (defpackage universal-config-lisp

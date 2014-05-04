@@ -191,3 +191,26 @@ If EXPECT-VECTOR is non-NIL, the bound OBJECT-VAR will be of type VECTOR."
                       do (setf (gethash (deserialize k) res)
                                (deserialize v)))))
     res))
+
+(defmacro define-class-de/serializer (class &rest slotdefs)
+  "Shorthand macro to define de/serializer methods for a class and the specified slots.
+
+CLASS    --- A class type.
+SLOTDEFS ::= SLOTDEF*
+SLOTDEF  ::= SLOT-SYMBOL | (SLOT-SYMBOL INITARG-SYMBOL)"
+  (let ((instance (gensym "INSTANCE"))
+        (contents (gensym "CONTENTS")))
+    `(progn (define-serializer (,class ,instance T)
+              (let ((,contents (list ,@(loop for slotdef in slotdefs
+                                            for slot = (if (listp slotdef) (car slotdef) slotdef)
+                                            collect `(slot-value ,instance ',slot)))))
+                (make-array ,(length slotdefs) :initial-contents ,contents)))
+            (define-deserializer (,class ,instance T)
+              (make-instance ',class
+                             ,@(loop with list = ()
+                                     for slotdef in slotdefs
+                                     for arg = (if (listp slotdef) (second slotdef) (find-symbol (string slotdef) "KEYWORD"))
+                                     for i from 0
+                                     do (push arg list)
+                                        (push `(aref ,instance ,i) list)
+                                     finally (return (nreverse list))))))))
