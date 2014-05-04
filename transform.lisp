@@ -6,22 +6,34 @@
 
 (in-package #:org.tymoonnext.universal-config)
 
-;; Serializing and Deserializing works with the hope that any and all output
-;; formats will support: Vectors, Hash Tables, Strings and Numbers.
-;;
-;; By default the functions defined here will only handle the following types:
-;; string, symbol, hash-table, vector, list
-;;
-;; Adding support for other types will have to happen through the macros:
-;; define-serializer, define-deserializer,
-;; define-deserializer, define-string-serializer
+(defvar *fallback-serializer* #'identity
+  "Fallback function used when no serializer method matched.
 
-(defvar *fallback-serializer* #'identity)
-(defvar *fallback-deserializer* #'identity)
-(defvar *serialize-symbols* T)
-(defvar *serialize-hash-tables* T)
-(defvar *serialize-lists* T)
-(defvar *serialize-numbers* T)
+Useful for applying serializers specific to the output format.")
+(defvar *fallback-deserializer* #'identity
+  "Fallback function used when no deserializer method matched.
+
+Useful for applying deserializers specific to the input format.")
+(defvar *serialize-symbols* T
+  "Whether symbols should be serialized into string representation.
+
+Note that symbol plists are not serialized into strings.")
+(defvar *serialize-hash-tables* T
+  "Whether to serialize hash-tables into a vector and a hash-table.
+
+This is necessary for most output formats as there is no differentiation
+made between hash-table tests. Serializing them will ensure that the proper
+test can be restored upon deserializing.")
+(defvar *serialize-lists* T
+  "Whether to serialize lists into vector representation.
+
+This is necessary for most output formats as there are no two representations
+of list- or vector-like structures.")
+(defvar *serialize-numbers* T
+  "Whether to serialize numbers into string representation.
+
+This is necessary for many output formats as they do not support the variety of
+number types lisp provides (ratios, floats, complex numbers).")
 
 (defun escape (string &optional (char #\:))
   "Escape all instances of CHAR in the string that match CHAR with a backslash."

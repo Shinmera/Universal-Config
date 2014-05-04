@@ -32,7 +32,9 @@
      ,@body))
 
 (defgeneric access (config-object accessor &optional default)
-  (:documentation "Universal object accessor.")
+  (:documentation "Universal object accessor.
+Returns two values, the first being the accessed value or the supplied default,
+the second being T if the requested place was found or NIL if the default is returned.")
   (:method ((o list) (pos fixnum) &optional default)
     (if (< pos (length o))
         (values (nth pos o) T)
@@ -97,6 +99,8 @@
         finally (return object)))
 
 (defun set-config-tree (accessors value)
+  "Sets the place indicated by the ACCESSORS list to VALUE if possible.
+See (SETF CONFIG-TREE)"
   (loop for previous = NIL    then object
         for object = *config* then (access object accessor)
         for prevaccess = NIL  then accessor
