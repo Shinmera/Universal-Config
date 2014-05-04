@@ -202,8 +202,8 @@ SLOTDEF  ::= SLOT-SYMBOL | (SLOT-SYMBOL INITARG-SYMBOL)"
         (contents (gensym "CONTENTS")))
     `(progn (define-serializer (,class ,instance T)
               (let ((,contents (list ,@(loop for slotdef in slotdefs
-                                            for slot = (if (listp slotdef) (car slotdef) slotdef)
-                                            collect `(slot-value ,instance ',slot)))))
+                                             for slot = (if (listp slotdef) (car slotdef) slotdef)
+                                             collect `(serialize (slot-value ,instance ',slot))))))
                 (make-array ,(length slotdefs) :initial-contents ,contents)))
             (define-deserializer (,class ,instance T)
               (make-instance ',class
@@ -212,5 +212,5 @@ SLOTDEF  ::= SLOT-SYMBOL | (SLOT-SYMBOL INITARG-SYMBOL)"
                                      for arg = (if (listp slotdef) (second slotdef) (find-symbol (string slotdef) "KEYWORD"))
                                      for i from 0
                                      do (push arg list)
-                                        (push `(aref ,instance ,i) list)
+                                        (push `(deserialize (aref ,instance ,i)) list)
                                      finally (return (nreverse list))))))))
