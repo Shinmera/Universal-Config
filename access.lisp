@@ -33,12 +33,16 @@
 
 (defgeneric access (config-object accessor &optional default)
   (:documentation "Universal object accessor.")
-  (:method ((o list) accessor &optional default)
-    ;; ???
-    ;; This is a problem because lists can represent arbitrary data.
-    )
+  (:method ((o list) (pos fixnum) &optional default)
+    (if (< pos (length o))
+        (values (nth pos o) T)
+        (values default NIL)))
   (:method ((o hash-table) accessor &optional default)
     (gethash accessor o default))
+  (:method ((o sequence) (pos fixnum) &optional default)
+    (if (< pos (length o))
+        (values (elt o pos) T)
+        (values default NIL)))
   (:method ((o array) (pos fixnum) &optional default)
     (if (array-in-bounds-p o pos)
         (values (aref o pos) T)
@@ -56,12 +60,12 @@
 
 (defgeneric (setf access) (value config-object accessor)
   (:documentation "Universal object setter.")
-  (:method (value (o list) accessor)
-    ;; ???
-    ;; This is a problem because lists can represent arbitrary data.
-    )
+  (:method (value (o list) (pos fixnum))
+    (setf (nth pos o) value))
   (:method (value (o hash-table) accessor)
     (setf (gethash accessor o) value))
+  (:method (values (o sequence) (pos fixnum))
+    (setf (elt o pos) values))
   (:method (value (o array) (pos fixnum))
     (setf (aref o pos) value))
   (:method (value (o array) (scr list))
