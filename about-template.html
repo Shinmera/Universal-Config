@@ -1,0 +1,94 @@
+<!--
+  This file is a part of Universal-Config
+  (c) 2014 TymoonNET/NexT http://tymoon.eu (shinmera@tymoon.eu)
+  Author: Nicolas Hafner <shinmera@tymoon.eu>
+  !-->
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Universal-Config - About</title>
+    <style type="text/css">
+      code{font-family: Consolas, Inconsolata, monospace;}
+      code.line{margin-left: 20px;}
+      h3{display: inline-block;margin:0;padding:0;}
+      .docs{list-style: none;}
+      .docs li{margin-bottom: 20px;}
+      .docs pre{margin: 0 0 0 10px; white-space: pre-wrap;}
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="universal-config-logo.png" alt="Universal-Config"/>
+      <h1>v1.0.0</h1>
+    </header>
+    <div id="content">
+      <article>
+        <header><h2>What is Universal-Config?</h2></header>
+        <p>This library tries to provide a layer for configuration files and storage that should be able to map any type to any configuration format and back.</p>
+      </article>
+      <article>
+        <header><h2>How To</h2></header>
+        <p>Accessing configuration works through the <code>CONFIG-TREE</code> function.</p>
+        <code class="line">(uc:config-tree :access "a path" 2)</code>
+        <p><code>CONFIG-TREE</code> internally uses the <code>ACCESS</code> function that tries to generically dispatch according to accessor and current object. By default it understands hash-tables, arrays, sequences, lists and slots on standard-objects. Support for alists and plists is not provided, as it isn't possible to properly distinguish them in a generic fashion. <code>CONFIG-TREE</code> and <code>ACCESS</code> are setf-able places. The former will try to augment missing objects in the configuration automatically upon setf if <code>*AUGMENT-MISSING-PLACES*</code> is non-NIL.</p>
+        <p>Saving and loading the configuration works with <code>SAVE-CONFIGURATION</code> and <code>LOAD-CONFIGURATION</code> respectively.</p>
+        <code class="line">(uc:save-configuration #p"~/test.lisp")</code>
+        <p>Depending on what format is available (by default lisp and json), you can pass the format argument:</p>
+        <code class="line">(uc:save-configuration #p"~/test.json" :format :json)</code>
+        <p>Due to having to save arbitrary types, universal-config has to serialize objects into a common structure. Depending on the amount of types the format supports, this will produce more or less gross output. Standard lisp format makes an effort to keep it readable though.</p>
+      </article>
+      <article>
+        <header><h2>Extending Universal-Config</h2></header>
+        <p>Universal-Config can be extended in three ways, the first being object accessors. In order to make Universal-Config support your own data structures, define methods for <code>ACCESS</code> and <code>(SETF ACCESS)</code>. The <code>ACCESS</code> method should always return two values, the first being the actual value or the supplied default value and the second being T if the place was found or NIL otherwise.</p>
+        <pre><code class="line">(defmethod uc:access ((list list) (accessor keyword) &amp;optional default)
+    (let ((return (assoc accessor list)))
+      (if return (values return T) (values default NIL))))</code></pre>
+        <pre><code class="line">(defmethod (setf uc:access) (value (list list) (accessor keyword))
+    (setf (cdr (assoc accessor list)) value))</code></pre>
+        <p>Secondly, to make extra types like classes be serializable, you have to extend <code>SERIALIZE</code> and <code>DESERIALIZE</code>. The easiest way to do this is in a fashion similar to this:</p>
+        <pre><code class="line">(uc:define-serializer (my-class instance T)
+    (make-array 2 :initial-contents (list (uc:serialize (first-slot instance)) (uc:serialize (other-slot instance)))))</code></pre>
+        <p>The last optional argument to <code>DEFINE-SERIALIZER</code> is a minor optimization switch that should be set to T if the returned object is a vector.</p>
+        <pre><code class="line">(uc:define-deserializer (my-class vector T)
+    (make-instance 'my-class :first-slot (uc:deserialize (aref vector 0)) :other-slot (uc:deserialize (aref vector 1))))</code></pre>
+        <p>However, adding de/serializers for classes can be eased with the shorthand macro <code>DEFINE-CLASS-DE/SERIALIZER</code>:</p>
+        <code class="line">(uc:define-class-de/serializer my-class first-slot other-slot)</code>
+        <p>When serializing, the output type should always be either an array, list, hash-map, string or number. Strings are handled specially though to allow for different types to be serialized into strings for output formats that don't support their canonical representations. The type the string is deserialized into is determined by its first character. Standard strings should therefore be preceded by #\- . If you have a data type that would fit better into a single string, you can define new de/serializing constructs for that through <code>DEFINE-STRING-SERIALIZER</code> and <code>DEFINE-STRING-DESERIALIZER</code>. By default string de/serializers for symbols, integers, ratios, floats and complex numbers are defined.</p>
+        <p>The last part is defining your own external formats. Universal-Config comes with two formats, <code>LISP</code> and <code>JSON</code>. Since differing formats support different types, there's a few switches that control the serialization process: <code>*SERIALIZE-SYMBOLS*</code> <code>*SERIALIZE-NUMBERS*</code> <code>*SERIALIZE-HASH-TABLES*</code> <code>*SERIALIZE-LISTS*</code>. The first two are string-serializer switches, the latter two decide whether these types should be wrapped in a vector, since most output formats don't support vectors and lists as different types, nor the different hash-table tests.</p>
+        <pre><code class="line">(uc:define-save-format my-format (stream object)
+    (my-printer stream (serialize object)))</code></pre>
+        <pre><code class="line">(uc:define-load-format my-format (stream)
+    (deserialize (my-reader stream)))</code></pre>
+        <p>Due to the way formats differ wildly, Universal-Config cannot assist further than providing the de/serialization facilities. It should not be too difficult to plug this into an existing format library though.</p>
+      </article>
+      <article>
+        <header><h2>Other Guff</h2></header>
+        <p>
+          Universal-Config is licensed under the <a href="http://opensource.org/licenses/Artistic-2.0">Artistic License 2.0</a> and &#169;2013 TymoonNET/NexT, <a href="http://shinmera.com">Nicolas Hafner</a>.<br />
+          This library can be obtained via git on <a href="https://github.com/Shinmera/universal-config.git">https://github.com/Shinmera/universal-config.git</a>. For questions, patches or suggestions, please contact me via <a href="mailto:shinmera@tymoon.eu">email</a> or write a <a href="https://github.com/Shinmera/universal-config/issues/new">github issue</a>.
+        </p>
+      </article>
+      <article>
+        <header><h2><a name="UNIVERSAL-CONFIG" href="#UNIVERSAL-CONFIG">Universal-Config Package Index</a></h2></header>
+        <ul id="docs" class="docs">
+          <li id="template">
+            <article>
+              <a name="Foo" class="anchor"></a>
+              <header>
+                <span class="functype">test</span>
+                <code>
+                  <h3><a href="#Foo" class="funcname">Foo</a></h3>
+                  <span class="funcargs">()</span>
+                </code>
+              </header>
+              <pre class="funcdesc">
+                Foobar
+              </pre>
+            </article>
+          </li>
+        </ul>
+      </article>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,476 @@
+<!DOCTYPE html><!--
+  This file is a part of Universal-Config
+  (c) 2014 TymoonNET/NexT http://tymoon.eu (shinmera@tymoon.eu)
+  Author: Nicolas Hafner <shinmera@tymoon.eu>
+  !--><html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Universal-Config - About</title>
+    <style type="text/css">
+      code{font-family: Consolas, Inconsolata, monospace;}
+      code.line{margin-left: 20px;}
+      h3{display: inline-block;margin:0;padding:0;}
+      .docs{list-style: none;}
+      .docs li{margin-bottom: 20px;}
+      .docs pre{margin: 0 0 0 10px; white-space: pre-wrap;}
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="universal-config-logo.png" alt="Universal-Config"/>
+      <h1>v1.0.0</h1>
+    </header>
+    <div id="content">
+      <article>
+        <header><h2>What is Universal-Config?</h2></header>
+        <p>This library tries to provide a layer for configuration files and storage that should be able to map any type to any configuration format and back.</p>
+      </article>
+      <article>
+        <header><h2>How To</h2></header>
+        <p>Accessing configuration works through the <code>CONFIG-TREE</code> function.</p>
+        <code class="line">(uc:config-tree :access "a path" 2)</code>
+        <p><code>CONFIG-TREE</code> internally uses the <code>ACCESS</code> function that tries to generically dispatch according to accessor and current object. By default it understands hash-tables, arrays, sequences, lists and slots on standard-objects. Support for alists and plists is not provided, as it isn't possible to properly distinguish them in a generic fashion. <code>CONFIG-TREE</code> and <code>ACCESS</code> are setf-able places. The former will try to augment missing objects in the configuration automatically upon setf if <code>*AUGMENT-MISSING-PLACES*</code> is non-NIL.</p>
+        <p>Saving and loading the configuration works with <code>SAVE-CONFIGURATION</code> and <code>LOAD-CONFIGURATION</code> respectively.</p>
+        <code class="line">(uc:save-configuration #p"~/test.lisp")</code>
+        <p>Depending on what format is available (by default lisp and json), you can pass the format argument:</p>
+        <code class="line">(uc:save-configuration #p"~/test.json" :format :json)</code>
+        <p>Due to having to save arbitrary types, universal-config has to serialize objects into a common structure. Depending on the amount of types the format supports, this will produce more or less gross output. Standard lisp format makes an effort to keep it readable though.</p>
+      </article>
+      <article>
+        <header><h2>Extending Universal-Config</h2></header>
+        <p>Universal-Config can be extended in three ways, the first being object accessors. In order to make Universal-Config support your own data structures, define methods for <code>ACCESS</code> and <code>(SETF ACCESS)</code>. The <code>ACCESS</code> method should always return two values, the first being the actual value or the supplied default value and the second being T if the place was found or NIL otherwise.</p>
+        <pre><code class="line">(defmethod uc:access ((list list) (accessor keyword) &amp;optional default)
+    (let ((return (assoc accessor list)))
+      (if return (values return T) (values default NIL))))</code></pre>
+        <pre><code class="line">(defmethod (setf uc:access) (value (list list) (accessor keyword))
+    (setf (cdr (assoc accessor list)) value))</code></pre>
+        <p>Secondly, to make extra types like classes be serializable, you have to extend <code>SERIALIZE</code> and <code>DESERIALIZE</code>. The easiest way to do this is in a fashion similar to this:</p>
+        <pre><code class="line">(uc:define-serializer (my-class instance T)
+    (make-array 2 :initial-contents (list (uc:serialize (first-slot instance)) (uc:serialize (other-slot instance)))))</code></pre>
+        <p>The last optional argument to <code>DEFINE-SERIALIZER</code> is a minor optimization switch that should be set to T if the returned object is a vector.</p>
+        <pre><code class="line">(uc:define-deserializer (my-class vector T)
+    (make-instance 'my-class :first-slot (uc:deserialize (aref vector 0)) :other-slot (uc:deserialize (aref vector 1))))</code></pre>
+        <p>However, adding de/serializers for classes can be eased with the shorthand macro <code>DEFINE-CLASS-DE/SERIALIZER</code>:</p>
+        <code class="line">(uc:define-class-de/serializer my-class first-slot other-slot)</code>
+        <p>When serializing, the output type should always be either an array, list, hash-map, string or number. Strings are handled specially though to allow for different types to be serialized into strings for output formats that don't support their canonical representations. The type the string is deserialized into is determined by its first character. Standard strings should therefore be preceded by #\- . If you have a data type that would fit better into a single string, you can define new de/serializing constructs for that through <code>DEFINE-STRING-SERIALIZER</code> and <code>DEFINE-STRING-DESERIALIZER</code>. By default string de/serializers for symbols, integers, ratios, floats and complex numbers are defined.</p>
+        <p>The last part is defining your own external formats. Universal-Config comes with two formats, <code>LISP</code> and <code>JSON</code>. Since differing formats support different types, there's a few switches that control the serialization process: <code>*SERIALIZE-SYMBOLS*</code> <code>*SERIALIZE-NUMBERS*</code> <code>*SERIALIZE-HASH-TABLES*</code> <code>*SERIALIZE-LISTS*</code>. The first two are string-serializer switches, the latter two decide whether these types should be wrapped in a vector, since most output formats don't support vectors and lists as different types, nor the different hash-table tests.</p>
+        <pre><code class="line">(uc:define-save-format my-format (stream object)
+    (my-printer stream (serialize object)))</code></pre>
+        <pre><code class="line">(uc:define-load-format my-format (stream)
+    (deserialize (my-reader stream)))</code></pre>
+        <p>Due to the way formats differ wildly, Universal-Config cannot assist further than providing the de/serialization facilities. It should not be too difficult to plug this into an existing format library though.</p>
+      </article>
+      <article>
+        <header><h2>Other Guff</h2></header>
+        <p>
+          Universal-Config is licensed under the <a href="http://opensource.org/licenses/Artistic-2.0">Artistic License 2.0</a> and ©2013 TymoonNET/NexT, <a href="http://shinmera.com">Nicolas Hafner</a>.<br/>
+          This library can be obtained via git on <a href="https://github.com/Shinmera/universal-config.git">https://github.com/Shinmera/universal-config.git</a>. For questions, patches or suggestions, please contact me via <a href="mailto:shinmera@tymoon.eu">email</a> or write a <a href="https://github.com/Shinmera/universal-config/issues/new">github issue</a>.
+        </p>
+      </article>
+      <article>
+        <header><h2><a name="UNIVERSAL-CONFIG" href="#UNIVERSAL-CONFIG">Universal-Config Package Index</a></h2></header>
+        <ul id="docs" class="docs"><li id="template">
+            <article>
+              <a class="anchor" name="*AUGMENT-MISSING-PLACES*"/>
+              <header>
+                <span class="functype">EXTERNAL SPECIAL</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">*AUGMENT-MISSING-PLACES*</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">If set to non-NIL, (SETF (CONFIG-TREE ..) ..) will attempt to augment missing places.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="*CONFIG*"/>
+              <header>
+                <span class="functype">EXTERNAL SPECIAL</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">*CONFIG*</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">The global configuration storage variable.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="*FALLBACK-DESERIALIZER*"/>
+              <header>
+                <span class="functype">EXTERNAL SPECIAL</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">*FALLBACK-DESERIALIZER*</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">Fallback function used when no deserializer method matched.
+
+Useful for applying deserializers specific to the input format.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="*FALLBACK-SERIALIZER*"/>
+              <header>
+                <span class="functype">EXTERNAL SPECIAL</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">*FALLBACK-SERIALIZER*</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">Fallback function used when no serializer method matched.
+
+Useful for applying serializers specific to the output format.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="*OUTPUT-FORMAT*"/>
+              <header>
+                <span class="functype">EXTERNAL SPECIAL</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">*OUTPUT-FORMAT*</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">The default output format to use.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="*SERIALIZE-HASH-TABLES*"/>
+              <header>
+                <span class="functype">EXTERNAL SPECIAL</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">*SERIALIZE-HASH-TABLES*</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">Whether to serialize hash-tables into a vector and a hash-table.
+
+This is necessary for most output formats as there is no differentiation
+made between hash-table tests. Serializing them will ensure that the proper
+test can be restored upon deserializing.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="*SERIALIZE-LISTS*"/>
+              <header>
+                <span class="functype">EXTERNAL SPECIAL</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">*SERIALIZE-LISTS*</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">Whether to serialize lists into vector representation.
+
+This is necessary for most output formats as there are no two representations
+of list- or vector-like structures.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="*SERIALIZE-NUMBERS*"/>
+              <header>
+                <span class="functype">EXTERNAL SPECIAL</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">*SERIALIZE-NUMBERS*</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">Whether to serialize numbers into string representation.
+
+This is necessary for many output formats as they do not support the variety of
+number types lisp provides (ratios, floats, complex numbers).</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="*SERIALIZE-SYMBOLS*"/>
+              <header>
+                <span class="functype">EXTERNAL SPECIAL</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">*SERIALIZE-SYMBOLS*</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">Whether symbols should be serialized into string representation.
+
+Note that symbol plists are not serialized into strings.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="ACCESS"/>
+              <header>
+                <span class="functype">EXTERNAL GENERIC</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">ACCESS</a></h3>
+                  <span class="funcargs">(CONFIG-OBJECT ACCESSOR &amp;OPTIONAL DEFAULT)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Universal object accessor.
+Returns two values, the first being the accessed value or the supplied default,
+the second being T if the requested place was found or NIL if the default is returned.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="ACCESSOR"/>
+              <header>
+                <span class="functype">EXTERNAL GENERIC</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">ACCESSOR</a></h3>
+                  <span class="funcargs">(CONDITION)</span>
+                </code>
+              </header>
+              <pre class="funcdesc"></pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="AUGMENTING-PLACE"/>
+              <header>
+                <span class="functype">EXTERNAL CLASS</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">AUGMENTING-PLACE</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">Warning condition signalled when a place is augmented automatically.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="CONFIG-TREE"/>
+              <header>
+                <span class="functype">EXTERNAL FUNCTION</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">CONFIG-TREE</a></h3>
+                  <span class="funcargs">(&amp;REST ACCESSORS)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Retrieve a value from the configuration.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="DEFINE-CLASS-DE/SERIALIZER"/>
+              <header>
+                <span class="functype">EXTERNAL MACRO</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">DEFINE-CLASS-DE/SERIALIZER</a></h3>
+                  <span class="funcargs">(CLASS &amp;REST SLOTDEFS)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Shorthand macro to define de/serializer methods for a class and the specified slots.
+
+CLASS    --- A class type.
+SLOTDEFS ::= SLOTDEF*
+SLOTDEF  ::= SLOT-SYMBOL | (SLOT-SYMBOL INITARG-SYMBOL)</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="DEFINE-DESERIALIZER"/>
+              <header>
+                <span class="functype">EXTERNAL MACRO</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">DEFINE-DESERIALIZER</a></h3>
+                  <span class="funcargs">((OBJECT-TYPE OBJECT-VAR &amp;OPTIONAL EXPECT-VECTOR) &amp;BODY BODY)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Define a new OBJECT-TYPE to deserialize into a usable representation.
+
+If EXPECT-VECTOR is non-NIL, the bound OBJECT-VAR will be of type VECTOR.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="DEFINE-LOAD-FORMAT"/>
+              <header>
+                <span class="functype">EXTERNAL MACRO</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">DEFINE-LOAD-FORMAT</a></h3>
+                  <span class="funcargs">(NAME (STREAMVAR) &amp;BODY BODY)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Define a format of NAME to load an object from a stream.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="DEFINE-SAVE-FORMAT"/>
+              <header>
+                <span class="functype">EXTERNAL MACRO</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">DEFINE-SAVE-FORMAT</a></h3>
+                  <span class="funcargs">(NAME (STREAMVAR OBJECTVAR) &amp;BODY BODY)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Define a format of NAME to save an object to a stream.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="DEFINE-SERIALIZER"/>
+              <header>
+                <span class="functype">EXTERNAL MACRO</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">DEFINE-SERIALIZER</a></h3>
+                  <span class="funcargs">((OBJECT-TYPE OBJECT-VAR &amp;OPTIONAL RETURN-VECTOR) &amp;BODY BODY)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Define an OBJECT-TYPE to be serialized. The expected value of this function should be one of HASH-TABLE, VECTOR, STRING or NUMBER.
+
+If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="DEFINE-STRING-SERIALIZER"/>
+              <header>
+                <span class="functype">EXTERNAL MACRO</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">DEFINE-STRING-SERIALIZER</a></h3>
+                  <span class="funcargs">((IDENT-CHAR OBJECT-TYPE OBJECT-VAR) &amp;BODY BODY)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Defines an OBJECT-TYPE to be serialized to a string.
+To discern string serialized objects, an IDENT-CHAR is needed.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="DESERIALIZE"/>
+              <header>
+                <span class="functype">EXTERNAL GENERIC</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">DESERIALIZE</a></h3>
+                  <span class="funcargs">(OBJECT)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Deserialize an OBJECT into a usable configuration object.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="ESCAPE"/>
+              <header>
+                <span class="functype">EXTERNAL FUNCTION</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">ESCAPE</a></h3>
+                  <span class="funcargs">(STRING &amp;OPTIONAL (CHAR :))</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Escape all instances of CHAR in the string that match CHAR with a backslash.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="INEXISTENT-PLACE"/>
+              <header>
+                <span class="functype">EXTERNAL CLASS</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">INEXISTENT-PLACE</a></h3>
+                  <span class="funcargs"></span>
+                </code>
+              </header>
+              <pre class="funcdesc">Error condition signalled when attempting to set an inexistent place.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="LOAD-CONFIGURATION"/>
+              <header>
+                <span class="functype">EXTERNAL FUNCTION</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">LOAD-CONFIGURATION</a></h3>
+                  <span class="funcargs">(PATH &amp;KEY (FORMAT *OUTPUT-FORMAT*) (IF-DOES-NOT-EXIST ERROR))</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Load the configuration from PATH with the given FORMAT.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="MAKE-CONTAINER"/>
+              <header>
+                <span class="functype">EXTERNAL GENERIC</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">MAKE-CONTAINER</a></h3>
+                  <span class="funcargs">(ACCESSOR)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Attempts to create a fitting container for an accessor.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="OBJECT"/>
+              <header>
+                <span class="functype">EXTERNAL GENERIC</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">OBJECT</a></h3>
+                  <span class="funcargs">(CONDITION)</span>
+                </code>
+              </header>
+              <pre class="funcdesc"></pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="SAVE-CONFIGURATION"/>
+              <header>
+                <span class="functype">EXTERNAL FUNCTION</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">SAVE-CONFIGURATION</a></h3>
+                  <span class="funcargs">(PATH &amp;KEY (FORMAT *OUTPUT-FORMAT*) (OBJECT *CONFIG*))</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Save the configuration OBJECT to PATH using the given FORMAT.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="SERIALIZE"/>
+              <header>
+                <span class="functype">EXTERNAL GENERIC</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">SERIALIZE</a></h3>
+                  <span class="funcargs">(OBJECT)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Serialize the given object recursively into a format that is ready for outputting.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="SET-CONFIG-TREE"/>
+              <header>
+                <span class="functype">EXTERNAL FUNCTION</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">SET-CONFIG-TREE</a></h3>
+                  <span class="funcargs">(ACCESSORS VALUE)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Sets the place indicated by the ACCESSORS list to VALUE if possible.
+See (SETF CONFIG-TREE)</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="SPLIT-ESCAPED"/>
+              <header>
+                <span class="functype">EXTERNAL FUNCTION</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">SPLIT-ESCAPED</a></h3>
+                  <span class="funcargs">(STRING &amp;OPTIONAL (CHAR :))</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Split the string by CHAR minding backslash escaped instances.</pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="UNESCAPE"/>
+              <header>
+                <span class="functype">EXTERNAL FUNCTION</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">UNESCAPE</a></h3>
+                  <span class="funcargs">(STRING &amp;OPTIONAL (CHAR :))</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Unescape all backslash escaped instances of CHAR. </pre>
+            </article>
+          </li><li id="template">
+            <article>
+              <a class="anchor" name="WITH-CONFIGURATION"/>
+              <header>
+                <span class="functype">EXTERNAL MACRO</span>
+                <code>
+                  <h3><a class="funcname" href="#Foo">WITH-CONFIGURATION</a></h3>
+                  <span class="funcargs">((CONFIGURATION) &amp;BODY BODY)</span>
+                </code>
+              </header>
+              <pre class="funcdesc">Establishes a configuration context.</pre>
+            </article>
+          </li></ul>
+      </article>
+    </div>
+  </body>
+</html>
