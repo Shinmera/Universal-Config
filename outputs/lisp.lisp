@@ -51,6 +51,7 @@
 (define-save-format lisp (stream object)
   (with-hash-table-syntax ()
     (let ((*print-array* T)
+          (*print-pretty* T)
           (*serialize-symbols* NIL)
           (*serialize-hash-tables* NIL)
           (*serialize-numbers* NIL)
