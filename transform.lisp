@@ -112,6 +112,9 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
         (complex (format NIL "c~S:~S" (realpart number) (imagpart number))))
       number))
 
+(defmethod serialize ((pathname pathname))
+  (format NIL "p~a" (uiop:native-namestring pathname)))
+
 (defgeneric deserialize (object)
   (:documentation "Deserialize an OBJECT into a usable configuration object.")
   (:method ((string string))
@@ -156,6 +159,9 @@ If RETURN-VECTOR is non-NIL, the object returned should be of type VECTOR."
   (let ((parts (split-escaped string)))
     (complex (parse-float (first parts))
              (parse-float (second parts)))))
+
+(define-string-deserializer (#\p string)
+  (uiop:parse-native-namestring string))
 
 (defgeneric deserialize-object (type object)
   (:documentation "Deserialize an OBJECT of TYPE into its usable representation.
