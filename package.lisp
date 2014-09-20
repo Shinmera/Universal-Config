@@ -52,10 +52,9 @@
    #:define-serializer
    
    #:deserialize
-   #:define-string-deserialize
+   #:define-string-deserializer
    #:define-deserializer
-   #:define-class-de/serializer)
-  )
+   #:define-class-de/serializer))
 
 (defpackage universal-config-lisp
   (:nicknames #:org.tymoonnext.universal-config.lisp #:uc-lisp)
