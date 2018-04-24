@@ -71,10 +71,7 @@ the second being T if the requested place was found or NIL if the default is ret
   (:method (value (o array) (pos fixnum))
     (setf (aref o pos) value))
   (:method (value (o array) (scr list))
-    ;; Copied from SBCL internals.
-    ;; Wouldn't know any other way to setf subscripts at runtime.
-    #+sbcl (setf (row-major-aref o (sb-impl::%array-row-major-index o scr))
-                 value))
+    (setf (row-major-aref o (apply #'array-row-major-index o scr)) value))
   (:method (value (o standard-object) (slot symbol))
     (setf (slot-value o slot) value))
   (:method (value (null null) accessor)
